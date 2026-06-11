@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>EduTrack — Student Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  /* ── Tokens ─────────────────────────────────────────────── */
+  :root {
+    --bg:        #0f1117;
+    --surface:   #181c27;
+    --surface2:  #1e2333;
+    --border:    #2a2f42;
+    --accent:    #4f8ef7;
+    --accent2:   #7c5cfc;
+    --green:     #22c55e;
+    --red:       #ef4444;
+    --amber:     #f59e0b;
+    --text:      #e8eaf0;
+    --muted:     #6b7280;
+    --display:   'Space Grotesk', sans-serif;
+    --body:      'Inter', sans-serif;
+    --radius:    10px;
+    --transition: 0.18s ease;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--body); font-size: 14px; min-height: 100vh; }
+  a { color: inherit; text-decoration: none; }
+
+  /* ── Layout ─────────────────────────────────────────────── */
+  #app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 220px; min-height: 100vh; background: var(--surface);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+    transition: transform var(--transition);
+  }
+  .sidebar-logo {
+    padding: 24px 20px 16px;
+    font-family: var(--display); font-size: 20px; font-weight: 700;
+    letter-spacing: -0.5px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .sidebar-logo span { font-size: 11px; font-weight: 500; display: block; color: var(--muted); -webkit-text-fill-color: var(--muted); margin-top: 2px; }
+  .nav { flex: 1; padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+    border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500;
+    color: var(--muted); transition: all var(--transition);
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(79,142,247,0.12); color: var(--accent); }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); }
+  .teacher-badge {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    background: var(--surface2); border-radius: 8px;
+  }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; flex-shrink: 0;
+  }
+  .teacher-info { flex: 1; min-width: 0; }
+  .teacher-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .teacher-role { font-size: 11px; color: var(--muted); }
+  .btn-logout { background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 4px; transition: color var(--transition); }
+  .btn-logout:hover { color: var(--red); }
+
+  .main { margin-left: 220px; flex: 1; display: flex; flex-direction: column; }
+  .topbar {
+    height: 56px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 28px; gap: 16px;
+    position: sticky; top: 0; z-index: 90;
+  }
+  .topbar-title { font-family: var(--display); font-size: 17px; font-weight: 600; flex: 1; }
+  .content { padding: 28px; flex: 1; }
+
+  /* ── Auth Screen ────────────────────────────────────────── */
+  #auth-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+  }
+  .auth-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 40px; width: 100%; max-width: 400px;
+  }
+  .auth-logo { font-family: var(--display); font-size: 26px; font-weight: 700; margin-bottom: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .auth-sub { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+  .auth-tabs { display: flex; gap: 4px; background: var(--bg); border-radius: 8px; padding: 4px; margin-bottom: 24px; }
+  .auth-tab { flex: 1; text-align: center; padding: 7px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); transition: all var(--transition); }
+  .auth-tab.active { background: var(--surface2); color: var(--text); }
+
+  /* ── Form Elements ──────────────────────────────────────── */
+  .form-group { margin-bottom: 16px; }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  input, select {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 13px;
+    font-family: var(--body); outline: none; transition: border-color var(--transition);
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--surface2); }
+
+  /* ── Buttons ────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; transition: all var(--transition); font-family: var(--body);
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #3b7de8; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-danger { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+  .btn-danger:hover { background: rgba(239,68,68,0.2); }
+  .btn-success { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-full { width: 100%; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Cards & Stats ──────────────────────────────────────── */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .stat-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-family: var(--display); font-size: 28px; font-weight: 700; }
+  .stat-sub { font-size: 12px; color: var(--muted); }
+  .stat-accent { color: var(--accent); }
+  .stat-green  { color: var(--green); }
+  .stat-red    { color: var(--red); }
+  .stat-amber  { color: var(--amber); }
+
+  /* ── Table ──────────────────────────────────────────────── */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+  .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+  .card-title { font-family: var(--display); font-size: 15px; font-weight: 600; flex: 1; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+  td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* ── Badge ──────────────────────────────────────────────── */
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .badge-green  { background: rgba(34,197,94,0.15);  color: var(--green); }
+  .badge-red    { background: rgba(239,68,68,0.15);  color: var(--red); }
+  .badge-amber  { background: rgba(245,158,11,0.15); color: var(--amber); }
+  .badge-blue   { background: rgba(79,142,247,0.15); color: var(--accent); }
+  .badge-purple { background: rgba(124,92,252,0.15); color: var(--accent2); }
+
+  /* ── Modal ──────────────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity var(--transition);
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 28px; width: 100%; max-width: 480px;
+    transform: translateY(12px); transition: transform var(--transition);
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-header { display: flex; align-items: center; margin-bottom: 24px; }
+  .modal-title { font-family: var(--display); font-size: 16px; font-weight: 600; flex: 1; }
+  .modal-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 20px; padding: 2px 6px; border-radius: 4px; transition: color var(--transition); }
+  .modal-close:hover { color: var(--text); }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+  /* ── Toast ──────────────────────────────────────────────── */
+  #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 16px; font-size: 13px; font-weight: 500; max-width: 320px;
+    display: flex; align-items: center; gap: 8px;
+    animation: slideIn 0.2s ease;
+  }
+  .toast-success { border-left: 3px solid var(--green); }
+  .toast-error   { border-left: 3px solid var(--red); }
+  .toast-info    { border-left: 3px solid var(--accent); }
+  @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* ── Attendance Grid ────────────────────────────────────── */
+  .att-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; padding: 16px; }
+  .att-row {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px; display: flex; align-items: center; gap: 12px;
+  }
+  .att-name { flex: 1; font-size: 13px; font-weight: 500; }
+  .att-roll { font-size: 11px; color: var(--muted); }
+  .att-btn-group { display: flex; gap: 4px; }
+  .att-btn {
+    padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: var(--bg);
+    color: var(--muted); transition: all var(--transition);
+  }
+  .att-btn.selected-present { background: rgba(34,197,94,0.15); color: var(--green); border-color: var(--green); }
+  .att-btn.selected-absent  { background: rgba(239,68,68,0.15);  color: var(--red);   border-color: var(--red); }
+  .att-btn.selected-late    { background: rgba(245,158,11,0.15); color: var(--amber); border-color: var(--amber); }
+
+  /* ── Progress Bar ───────────────────────────────────────── */
+  .progress-bar { height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+
+  /* ── Empty State ────────────────────────────────────────── */
+  .empty { text-align: center; padding: 48px 20px; color: var(--muted); }
+  .empty svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.4; }
+  .empty p { font-size: 13px; }
+
+  /* ── Misc ───────────────────────────────────────────────── */
+  .section-gap { margin-bottom: 20px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .content { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Auth Screen ─────────────────────────────────────────── -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">EduTrack</div>
+    <div class="auth-sub">Student Result & Attendance System</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('login')">Login</div>
+      <div class="auth-tab" onclick="switchAuthTab('register')">Register</div>
+    </div>
+    <!-- Login Form -->
+    <div id="login-form">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="teacher@school.com"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••"/>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="doLogin()">Sign In</button>
+    </div>
+    <!-- Register Form -->
+    <div id="register-form" style="display:none">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="Mrs. Priya Sharma"/>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="teacher@school.com"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="Min 6 characters"/>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="doRegister()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main App ────────────────────────────────────────────── -->
+<div id="app" style="display:none">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">EduTrack <span>Management System</span></div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="navigate('dashboard')" data-page="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="navigate('students')" data-page="students">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Students
+      </div>
+      <div class="nav-item" onclick="navigate('subjects')" data-page="subjects">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Subjects
+      </div>
+      <div class="nav-item" onclick="navigate('attendance')" data-page="attendance">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Attendance
+      </div>
+      <div class="nav-item" onclick="navigate('results')" data-page="results">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Results
+      </div>
+      <div class="nav-item" onclick="navigate('analytics')" data-page="analytics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Analytics
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="teacher-badge">
+        <div class="avatar" id="teacher-avatar">T</div>
+        <div class="teacher-info">
+          <div class="teacher-name" id="teacher-name-display">Teacher</div>
+          <div class="teacher-role">Educator</div>
+        </div>
+        <button class="btn-logout" onclick="doLogout()" title="Logout">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="page-title">Dashboard</div>
+      <div id="topbar-actions"></div>
+    </div>
+    <div class="content" id="page-content">
+      <!-- Pages rendered here -->
+    </div>
+  </main>
+</div>
+
+<!-- ── Modals ──────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title"></div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast-container"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────
+const API = 'https://student-tracking-dp24.onrender.com';
+let token = localStorage.getItem('token') || null;
+let teacherName = localStorage.getItem('teacherName') || 'Teacher';
+let currentPage = 'dashboard';
+
+// ── API Helper ────────────────────────────────────────────
+async function api(path, method = 'GET', body = null) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const res = await fetch(API + path, opts);
+    if (res.status === 401) { doLogout(); return null; }
+    if (res.status === 204) return true;
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Request failed');
+    return data;
+  } catch(e) {
+    toast(e.message, 'error');
+    return null;
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ── Auth ──────────────────────────────────────────────────
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.getElementById('login-form').style.display    = tab==='login'    ? '' : 'none';
+  document.getElementById('register-form').style.display = tab==='register' ? '' : 'none';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if (!email || !password) return toast('Fill in all fields', 'error');
+  const data = await api('/auth/login', 'POST', { email, password });
+  if (!data) return;
+  token = data.access_token;
+  teacherName = email.split('@')[0];
+  localStorage.setItem('token', token);
+  localStorage.setItem('teacherName', teacherName);
+  initApp();
+}
+
+async function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  if (!name || !email || !password) return toast('Fill in all fields', 'error');
+  const data = await api('/auth/register', 'POST', { name, email, password });
+  if (!data) return;
+  toast('Account created! Please login.', 'success');
+  switchAuthTab('login');
+  teacherName = name;
+}
+
+function doLogout() {
+  token = null; localStorage.removeItem('token'); localStorage.removeItem('teacherName');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+}
+
+function initApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('teacher-name-display').textContent = teacherName;
+  document.getElementById('teacher-avatar').textContent = teacherName[0].toUpperCase();
+  navigate('dashboard');
+}
+
+if (token) initApp();
+
+// ── Navigation ────────────────────────────────────────────
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.page === page));
+  const titles = { dashboard:'Dashboard', students:'Students', subjects:'Subjects', attendance:'Attendance', results:'Results', analytics:'Analytics' };
+  document.getElementById('page-title').textContent = titles[page];
+  document.getElementById('topbar-actions').innerHTML = '';
+  const pages = { dashboard: renderDashboard, students: renderStudents, subjects: renderSubjects, attendance: renderAttendance, results: renderResults, analytics: renderAnalytics };
+  (pages[page] || (() => {}))();
+}
+
+// ── Modal Helpers ─────────────────────────────────────────
+function openModal(title, body) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-overlay'))
+    document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// ── Grade Colours ─────────────────────────────────────────
+function gradeBadge(g) {
+  const map = { 'A+':'badge-green','A':'badge-green','B+':'badge-blue','B':'badge-blue','C':'badge-amber','D':'badge-amber','F':'badge-red' };
+  return `<span class="badge ${map[g]||'badge-blue'}">${g}</span>`;
+}
+function pctColor(p) { return p >= 75 ? 'var(--green)' : p >= 50 ? 'var(--amber)' : 'var(--red)'; }
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════
+async function renderDashboard() {
+  document.getElementById('page-content').innerHTML = `<div style="color:var(--muted);font-size:13px">Loading…</div>`;
+  const [students, subjects] = await Promise.all([
+    api('/students/'), api('/subjects/')
+  ]);
+  const attSummary = await api('/attendance/summary');
+  const low = (attSummary||[]).filter(s => s.attendance_pct < 75);
+  const total = students?.length || 0;
+  const subCount = subjects?.length || 0;
+
+  document.getElementById('page-content').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Students</div>
+        <div class="stat-value stat-accent">${total}</div>
+        <div class="stat-sub">Enrolled</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Subjects</div>
+        <div class="stat-value stat-purple" style="color:var(--accent2)">${subCount}</div>
+        <div class="stat-sub">Active subjects</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Low Attendance</div>
+        <div class="stat-value stat-red">${low.length}</div>
+        <div class="stat-sub">Below 75%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Attendance</div>
+        <div class="stat-value stat-green">${attSummary?.length ? Math.round(attSummary.reduce((a,s)=>a+s.attendance_pct,0)/attSummary.length) : 0}%</div>
+        <div class="stat-sub">Across all students</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Recent Students</div></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Name</th><th>Roll No</th><th>Class</th></tr></thead>
+          <tbody>${(students||[]).slice(0,6).map(s=>`<tr><td>${s.name}</td><td>${s.roll_number}</td><td><span class="badge badge-blue">${s.class_name}</span></td></tr>`).join('')||'<tr><td colspan="3" class="empty"><p>No students yet</p></td></tr>'}</tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">⚠️ Low Attendance Alert</div></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Student</th><th>Attendance</th></tr></thead>
+          <tbody>${low.slice(0,6).map(s=>`<tr><td>${s.student_name}</td><td><span style="color:var(--red);font-weight:600">${s.attendance_pct}%</span></td></tr>`).join('')||'<tr><td colspan="2" style="text-align:center;padding:20px;color:var(--green)">✓ All students above 75%</td></tr>'}</tbody>
+        </table></div>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// STUDENTS
+// ═══════════════════════════════════════════════════════════
+async function renderStudents() {
+  document.getElementById('topbar-actions').innerHTML = `<button class="btn btn-primary btn-sm" onclick="openAddStudent()">+ Add Student</button>`;
+  document.getElementById('page-content').innerHTML = `<div style="color:var(--muted)">Loading…</div>`;
+  const students = await api('/students/');
+  if (!students) return;
+  document.getElementById('page-content').innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">All Students</div>
+        <input type="text" placeholder="Filter by class…" oninput="filterTable(this,'students-tbody',2)" style="width:180px;padding:6px 10px;font-size:12px"/>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Roll No</th><th>Name</th><th>Class</th><th>Email</th><th>Actions</th></tr></thead>
+        <tbody id="students-tbody">${students.map(s=>`
+          <tr>
+            <td><span class="badge badge-purple">${s.roll_number}</span></td>
+            <td><b>${s.name}</b></td>
+            <td>${s.class_name}</td>
+            <td style="color:var(--muted)">${s.email||'—'}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="deleteStudent(${s.id},'${s.name}')">Delete</button></td>
+          </tr>`).join('')||'<tr><td colspan="5" class="empty"><p>No students added yet</p></td></tr>'}
+        </tbody>
+      </table></div>
+    </div>`;
+}
+
+function openAddStudent() {
+  openModal('Add New Student', `
+    <div class="form-group"><label>Roll Number</label><input id="m-roll" placeholder="e.g. 10A-001"/></div>
+    <div class="form-group"><label>Full Name</label><input id="m-name" placeholder="Student name"/></div>
+    <div class="form-group"><label>Class</label><input id="m-class" placeholder="e.g. 10A, 11B"/></div>
+    <div class="form-group"><label>Email (optional)</label><input id="m-email" type="email" placeholder="student@school.com"/></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="addStudent()">Add Student</button>
+    </div>`);
+}
+
+async function addStudent() {
+  const data = { roll_number: document.getElementById('m-roll').value.trim(), name: document.getElementById('m-name').value.trim(), class_name: document.getElementById('m-class').value.trim(), email: document.getElementById('m-email').value.trim()||null };
+  if (!data.roll_number || !data.name || !data.class_name) return toast('Fill required fields','error');
+  const res = await api('/students/', 'POST', data);
+  if (res) { toast(`${res.name} added!`, 'success'); closeModal(); renderStudents(); }
+}
+
+async function deleteStudent(id, name) {
+  if (!confirm(`Delete ${name}?`)) return;
+  const res = await api(`/students/${id}`, 'DELETE');
+  if (res) { toast(`${name} removed`, 'info'); renderStudents(); }
+}
+
+function filterTable(input, tbodyId, colIndex) {
+  const v = input.value.toLowerCase();
+  document.querySelectorAll(`#${tbodyId} tr`).forEach(tr => {
+    const td = tr.querySelectorAll('td')[colIndex];
+    tr.style.display = !td || td.textContent.toLowerCase().includes(v) ? '' : 'none';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// SUBJECTS
+// ═══════════════════════════════════════════════════════════
+async function renderSubjects() {
+  document.getElementById('topbar-actions').innerHTML = `<button class="btn btn-primary btn-sm" onclick="openAddSubject()">+ Add Subject</button>`;
+  const subjects = await api('/subjects/');
+  if (!subjects) return;
+  document.getElementById('page-content').innerHTML = `
+    <div class="card">
+      <div class="card-header"><div class="card-title">Subjects</div></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Code</th><th>Name</th><th>Max Marks</th><th>Pass Marks</th><th>Actions</th></tr></thead>
+        <tbody>${subjects.map(s=>`
+          <tr>
+            <td><span class="badge badge-blue">${s.code}</span></td>
+            <td><b>${s.name}</b></td>
+            <td>${s.max_marks}</td>
+            <td>${s.pass_marks}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="deleteSubject(${s.id},'${s.name}')">Delete</button></td>
+          </tr>`).join('')||'<tr><td colspan="5" class="empty"><p>No subjects added yet</p></td></tr>'}
+        </tbody>
+      </table></div>
+    </div>`;
+}
+
+function openAddSubject() {
+  openModal('Add Subject', `
+    <div class="form-group"><label>Subject Code</label><input id="m-code" placeholder="e.g. MATH101"/></div>
+    <div class="form-group"><label>Subject Name</label><input id="m-sname" placeholder="e.g. Mathematics"/></div>
+    <div class="form-group"><label>Max Marks</label><input id="m-max" type="number" value="100"/></div>
+    <div class="form-group"><label>Pass Marks</label><input id="m-pass" type="number" value="35"/></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="addSubject()">Add Subject</button>
+    </div>`);
+}
+
+async function addSubject() {
+  const data = { code: document.getElementById('m-code').value.trim(), name: document.getElementById('m-sname').value.trim(), max_marks: +document.getElementById('m-max').value, pass_marks: +document.getElementById('m-pass').value };
+  if (!data.code || !data.name) return toast('Fill required fields','error');
+  const res = await api('/subjects/', 'POST', data);
+  if (res) { toast(`${res.name} added!`, 'success'); closeModal(); renderSubjects(); }
+}
+
+async function deleteSubject(id, name) {
+  if (!confirm(`Delete ${name}?`)) return;
+  const res = await api(`/subjects/${id}`, 'DELETE');
+  if (res) { toast(`${name} removed`, 'info'); renderSubjects(); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ATTENDANCE
+// ═══════════════════════════════════════════════════════════
+let attSelections = {};
+
+async function renderAttendance() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('page-content').innerHTML = `
+    <div class="row section-gap">
+      <div class="form-group" style="margin:0">
+        <label>Date</label>
+        <input type="date" id="att-date" value="${today}" onchange="loadAttGrid()" style="width:180px"/>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Class Filter</label>
+        <input type="text" id="att-class" placeholder="e.g. 10A" style="width:130px" onchange="loadAttGrid()"/>
+      </div>
+      <button class="btn btn-primary" onclick="submitBulkAttendance()" style="margin-top:18px">Save Attendance</button>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Mark Attendance</div></div>
+      <div id="att-grid-wrap"><div class="empty"><p>Select a date and optionally filter by class</p></div></div>
+    </div>
+    <div style="margin-top:20px" class="card">
+      <div class="card-header"><div class="card-title">Attendance Summary</div><button class="btn btn-secondary btn-sm" onclick="loadAttSummary()">Refresh</button></div>
+      <div id="att-summary-wrap"><div class="empty"><p>Click Refresh to load summary</p></div></div>
+    </div>`;
+  loadAttGrid();
+}
+
+async function loadAttGrid() {
+  attSelections = {};
+  const classFilter = document.getElementById('att-class').value.trim();
+  let url = '/students/';
+  const students = await api(url);
+  if (!students) return;
+  const filtered = classFilter ? students.filter(s => s.class_name.toLowerCase().includes(classFilter.toLowerCase())) : students;
+  if (!filtered.length) { document.getElementById('att-grid-wrap').innerHTML = '<div class="empty"><p>No students found</p></div>'; return; }
+  filtered.forEach(s => attSelections[s.id] = 'present');
+  document.getElementById('att-grid-wrap').innerHTML = `<div class="att-grid">${filtered.map(s=>`
+    <div class="att-row">
+      <div><div class="att-name">${s.name}</div><div class="att-roll">${s.roll_number} · ${s.class_name}</div></div>
+      <div class="att-btn-group">
+        <button class="att-btn selected-present" id="att-p-${s.id}" onclick="setAtt(${s.id},'present')">P</button>
+        <button class="att-btn" id="att-a-${s.id}" onclick="setAtt(${s.id},'absent')">A</button>
+        <button class="att-btn" id="att-l-${s.id}" onclick="setAtt(${s.id},'late')">L</button>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function setAtt(id, status) {
+  attSelections[id] = status;
+  ['present','absent','late'].forEach(s => {
+    const el = document.getElementById(`att-${s[0]}-${id}`);
+    if (el) el.className = `att-btn${attSelections[id]===s?' selected-'+s:''}`;
+  });
+}
+
+async function submitBulkAttendance() {
+  const date = document.getElementById('att-date').value;
+  const records = Object.entries(attSelections).map(([id, status]) => ({ student_id: +id, status }));
+  if (!records.length) return toast('No students to mark', 'error');
+  const res = await api('/attendance/bulk', 'POST', { date, records });
+  if (res) toast(`Saved: ${res.created} new, ${res.updated} updated`, 'success');
+}
+
+async function loadAttSummary() {
+  const summary = await api('/attendance/summary');
+  if (!summary) return;
+  document.getElementById('att-summary-wrap').innerHTML = `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Student</th><th>Roll</th><th>Present</th><th>Absent</th><th>Late</th><th>Attendance %</th></tr></thead>
+      <tbody>${summary.map(s => {
+        const pct = s.attendance_pct;
+        const color = pctColor(pct);
+        return `<tr>
+          <td><b>${s.student_name}</b></td>
+          <td>${s.roll_number}</td>
+          <td style="color:var(--green)">${s.present}</td>
+          <td style="color:var(--red)">${s.absent}</td>
+          <td style="color:var(--amber)">${s.late}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="progress-bar" style="width:80px"><div class="progress-fill" style="width:${pct}%;background:${color}"></div></div>
+              <span style="color:${color};font-weight:600">${pct}%</span>
+            </div>
+          </td>
+        </tr>`;}).join('')||'<tr><td colspan="6" class="empty"><p>No attendance records</p></td></tr>'}
+      </tbody>
+    </table></div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// RESULTS
+// ═══════════════════════════════════════════════════════════
+async function renderResults() {
+  document.getElementById('topbar-actions').innerHTML = `<button class="btn btn-primary btn-sm" onclick="openAddResult()">+ Add Result</button>`;
+  const [students, subjects] = await Promise.all([api('/students/'), api('/subjects/')]);
+  document.getElementById('page-content').innerHTML = `
+    <div class="row section-gap">
+      <div class="form-group" style="margin:0">
+        <label>Student</label>
+        <select id="res-student-filter" onchange="loadStudentResult()" style="width:200px">
+          <option value="">Select student…</option>
+          ${(students||[]).map(s=>`<option value="${s.id}">${s.name} (${s.roll_number})</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Exam Type</label>
+        <select id="res-exam-filter" onchange="loadStudentResult()" style="width:130px">
+          <option>Final</option><option>Midterm</option><option>Unit Test</option>
+        </select>
+      </div>
+    </div>
+    <div id="result-card-wrap" class="card">
+      <div class="empty"><p>Select a student to view their result card</p></div>
+    </div>`;
+}
+
+async function loadStudentResult() {
+  const sid = document.getElementById('res-student-filter').value;
+  const exam = document.getElementById('res-exam-filter').value;
+  if (!sid) return;
+  const data = await api(`/results/student/${sid}?exam_type=${exam}`);
+  if (!data) return;
+  const wrap = document.getElementById('result-card-wrap');
+  wrap.innerHTML = `
+    <div class="card-header">
+      <div>
+        <div class="card-title">${data.student_name} — Result Card</div>
+        <div style="font-size:12px;color:var(--muted)">${data.roll_number} · Class ${data.class_name} · ${exam}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:22px;font-weight:700;font-family:var(--display);color:${pctColor(data.percentage)}">${data.percentage}%</div>
+        <div>${gradeBadge(data.overall_grade)} <span class="badge ${data.result_status==='Pass'?'badge-green':'badge-red'}">${data.result_status}</span></div>
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Subject</th><th>Marks</th><th>Max</th><th>%</th><th>Grade</th><th>Status</th></tr></thead>
+      <tbody>${data.subjects.map(s=>`
+        <tr>
+          <td><b>${s.subject_name}</b> <span style="color:var(--muted);font-size:11px">${s.subject_code}</span></td>
+          <td>${s.marks}</td>
+          <td style="color:var(--muted)">${s.max_marks}</td>
+          <td>${s.percentage}%</td>
+          <td>${gradeBadge(s.grade)}</td>
+          <td><span class="badge ${s.status==='Pass'?'badge-green':'badge-red'}">${s.status}</span></td>
+        </tr>`).join('')||'<tr><td colspan="6" class="empty"><p>No results entered yet</p></td></tr>'}
+      </tbody>
+    </table></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:24px;font-size:13px">
+      <span>Total: <b>${data.total_marks}/${data.total_max}</b></span>
+      <span>Percentage: <b style="color:${pctColor(data.percentage)}">${data.percentage}%</b></span>
+      <span>Grade: ${gradeBadge(data.overall_grade)}</span>
+    </div>`;
+}
+
+async function openAddResult() {
+  const [students, subjects] = await Promise.all([api('/students/'), api('/subjects/')]);
+  openModal('Add Result', `
+    <div class="form-group"><label>Student</label>
+      <select id="m-res-student">
+        <option value="">Select student…</option>
+        ${(students||[]).map(s=>`<option value="${s.id}">${s.name} (${s.roll_number})</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group"><label>Subject</label>
+      <select id="m-res-subject">
+        <option value="">Select subject…</option>
+        ${(subjects||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group"><label>Marks</label><input id="m-res-marks" type="number" placeholder="e.g. 78"/></div>
+    <div class="form-group"><label>Exam Type</label>
+      <select id="m-res-exam"><option>Final</option><option>Midterm</option><option>Unit Test</option></select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="addResult()">Save Result</button>
+    </div>`);
+}
+
+async function addResult() {
+  const data = {
+    student_id: +document.getElementById('m-res-student').value,
+    subject_id: +document.getElementById('m-res-subject').value,
+    marks: +document.getElementById('m-res-marks').value,
+    exam_type: document.getElementById('m-res-exam').value
+  };
+  if (!data.student_id || !data.subject_id || !data.marks) return toast('Fill all fields','error');
+  const res = await api('/results/', 'POST', data);
+  if (res) { toast('Result saved!','success'); closeModal(); loadStudentResult(); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ANALYTICS
+// ═══════════════════════════════════════════════════════════
+async function renderAnalytics() {
+  const students = await api('/students/');
+  const classes = [...new Set((students||[]).map(s=>s.class_name))];
+  document.getElementById('page-content').innerHTML = `
+    <div class="row section-gap">
+      <div class="form-group" style="margin:0">
+        <label>Class</label>
+        <select id="ana-class" onchange="loadClassAnalytics()" style="width:160px">
+          <option value="">Select class…</option>
+          ${classes.map(c=>`<option>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Exam Type</label>
+        <select id="ana-exam" onchange="loadClassAnalytics()" style="width:130px">
+          <option>Final</option><option>Midterm</option><option>Unit Test</option>
+        </select>
+      </div>
+    </div>
+    <div id="analytics-wrap"><div class="empty"><p>Select a class to view analytics</p></div></div>`;
+}
+
+async function loadClassAnalytics() {
+  const cls  = document.getElementById('ana-class').value;
+  const exam = document.getElementById('ana-exam').value;
+  if (!cls) return;
+  const data = await api(`/results/class/${cls}/analytics?exam_type=${exam}`);
+  if (!data) return;
+  document.getElementById('analytics-wrap').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Total Students</div><div class="stat-value stat-accent">${data.total_students}</div></div>
+      <div class="stat-card"><div class="stat-label">Passed</div><div class="stat-value stat-green">${data.passed}</div></div>
+      <div class="stat-card"><div class="stat-label">Failed</div><div class="stat-value stat-red">${data.failed}</div></div>
+      <div class="stat-card"><div class="stat-label">Pass Rate</div><div class="stat-value" style="color:${pctColor(data.pass_rate)}">${data.pass_rate}%</div></div>
+      <div class="stat-card"><div class="stat-label">Class Avg</div><div class="stat-value stat-accent">${data.class_avg_pct}%</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-header"><div class="card-title">🏆 Top 5 Toppers</div></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>#</th><th>Name</th><th>%</th><th>Grade</th></tr></thead>
+          <tbody>${data.toppers.map((t,i)=>`<tr><td><b>${i+1}</b></td><td>${t.student_name}</td><td style="color:${pctColor(t.percentage)};font-weight:600">${t.percentage}%</td><td>${gradeBadge(t.grade)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty"><p>No data</p></td></tr>'}</tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">📚 Subject-wise Average</div></div>
+        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:12px">
+          ${data.subject_averages.map(s=>`
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+                <span>${s.subject_name}</span>
+                <span style="color:${pctColor(s.average_pct)};font-weight:600">${s.average_pct}%</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" style="width:${s.average_pct}%;background:${pctColor(s.average_pct)}"></div></div>
+            </div>`).join('')||'<p style="color:var(--muted);font-size:13px">No subject data</p>'}
+        </div>
+      </div>
+    </div>`;
+}
+</script>
+</body>
+</html>
