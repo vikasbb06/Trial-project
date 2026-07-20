@@ -38,46 +38,6 @@ Server runs at: http://localhost:8000
 Interactive API docs: http://localhost:8000/docs
 
 ## API Overview
-
-### Auth
-| Method | Endpoint              | Description        |
-|--------|-----------------------|--------------------|
-| POST   | /api/auth/register    | Register a teacher |
-| POST   | /api/auth/login       | Login → get token  |
-
-> All other endpoints require `Authorization: Bearer <token>` header.
-
-### Students
-| Method | Endpoint                  | Description         |
-|--------|---------------------------|---------------------|
-| POST   | /api/students/            | Add student         |
-| GET    | /api/students/            | List all (filter by class) |
-| GET    | /api/students/{id}        | Get student         |
-| PUT    | /api/students/{id}        | Update student      |
-| DELETE | /api/students/{id}        | Delete student      |
-
-### Subjects
-| Method | Endpoint                  | Description     |
-|--------|---------------------------|-----------------|
-| POST   | /api/subjects/            | Add subject     |
-| GET    | /api/subjects/            | List subjects   |
-| DELETE | /api/subjects/{id}        | Delete subject  |
-
-### Attendance
-| Method | Endpoint                          | Description                    |
-|--------|-----------------------------------|--------------------------------|
-| POST   | /api/attendance/                  | Mark single attendance         |
-| POST   | /api/attendance/bulk              | Mark attendance for whole class|
-| GET    | /api/attendance/                  | List records (filterable)      |
-| GET    | /api/attendance/summary           | Per-student % summary          |
-| GET    | /api/attendance/low-attendance    | Students below threshold (75%) |
-
-### Results
-| Method | Endpoint                                  | Description              |
-|--------|-------------------------------------------|--------------------------|
-| POST   | /api/results/                             | Add/update marks         |
-| GET    | /api/results/                             | List results             |
-| GET    | /api/results/student/{id}                 | Full result card + grade |
 | GET    | /api/results/class/{class_name}/analytics | Class-wide analytics     |
 
 ## Grade Scale
